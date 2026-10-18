@@ -56,20 +56,20 @@
       <div class="stat"><div class="stat-head">New leads <span class="stat-icon">⌕</span></div><div class="stat-value" id="newCount">0</div><div class="stat-sub">Saved to your account</div></div>
       <div class="stat"><div class="stat-head">Website opportunities <span class="stat-icon">↗</span></div><div class="stat-value" id="websiteCount">0</div><div class="stat-sub">Saved opportunities</div></div>
       <div class="stat"><div class="stat-head">Google visibility <span class="stat-icon">◎</span></div><div class="stat-value" id="googleCount">0</div><div class="stat-sub">Saved opportunities</div></div>
-      <div class="stat"><div class="stat-head">Follow-ups due <span class="stat-icon">↻</span></div><div class="stat-value" id="followupCount">0</div><div class="stat-sub">Scheduled for follow-up</div></div>
+      <div class="stat"><div class="stat-head">Follow-ups due <span class="stat-icon">↻</span></div><div class="stat-value" id="followupCount">0</div><div class="stat-sub" id="followupSub">Scheduled follow-ups</div></div>
     </section>
     <div class="content-grid">
       <section class="panel">
         <div class="panel-head"><div><h2>Prospect queue</h2><div class="panel-sub">Only leads saved under your account appear here.</div></div><span class="pill green" id="leadCountPill">0 SAVED</span></div>
         <form class="lead-form" id="discoveryForm">
           <h3>Discover businesses</h3>
-          <div class="panel-sub">Search OpenStreetMap for publicly listed businesses. Results are saved to your account after duplicate checks. Verify each lead before contacting it.</div>
+          <div class="panel-sub">Search Google Maps through SerpApi. Results are saved after duplicate checks. Verify each lead before contacting it.</div>
           <div class="form-grid">
             <div><label for="discoveryTown">Town or city</label><input id="discoveryTown" maxlength="100" value="Nakuru" required placeholder="e.g. Nakuru"></div>
             <div><label for="discoveryCategory">Business category</label><select id="discoveryCategory"><option value="furniture">Furniture shops</option><option value="carpenter">Carpenters</option><option value="all">All supported categories</option></select></div>
           </div>
           <button class="btn primary" id="discoverBtn" type="submit">Find and save leads</button>
-          <div class="hint" id="discoveryStatus" role="status">Discovery is on-demand, not an automatic daily scan. OpenStreetMap coverage varies by town.</div>
+          <div class="hint" id="discoveryStatus" role="status">Discovery runs on demand. Search results are saved after duplicate checks; verify details before outreach.</div>
         </form>
         <form class="lead-form" id="leadForm">
           <h3>Add a business lead</h3><div class="panel-sub">Enter a business you have personally verified. Fields marked required must be filled.</div>
@@ -86,7 +86,7 @@
           <label for="businessReason">Reason / notes</label><textarea id="businessReason" rows="2" maxlength="1000" placeholder="What did you verify? What could help this business?"></textarea>
           <button class="btn primary" id="addLeadBtn" type="submit">Save lead</button><span class="hint" id="leadFormStatus" role="status"></span>
         </form>
-        <div class="filters"><input id="searchInput" type="search" placeholder="Search business, town or service…" aria-label="Search leads"><select id="typeFilter" aria-label="Filter by opportunity"><option value="all">All opportunities</option><option value="website">Website</option><option value="google">Google visibility</option><option value="both">Both</option></select></div>
+        <div class="filters"><input id="searchInput" type="search" placeholder="Search business, town or service…" aria-label="Search leads"><select id="typeFilter" aria-label="Filter by opportunity"><option value="all">All opportunities</option><option value="website">Website</option><option value="google">Google visibility</option><option value="both">Both</option></select><select id="followupFilter" aria-label="Filter follow-ups"><option value="all">All follow-up dates</option><option value="scheduled">Scheduled follow-ups</option><option value="due">Due / overdue</option><option value="unscheduled">No follow-up scheduled</option></select></div>
         <div class="lead-list" id="leadList"></div>
         <div class="empty" id="emptyState" hidden>No saved leads match. Add a verified business above to get started.</div>
       </section>
@@ -106,7 +106,7 @@
     </div>
     <div class="activity-row" style="margin-top:12px"><span class="activity-dot"></span><div><b id="accountLabel">Signed out</b><span><button class="btn" type="button" id="signOutBtn">Sign out</button></span></div></div>
     </div>
-    <footer>Jackson Web Solutions Lead Finder · Private lead storage enabled · On-demand OpenStreetMap discovery · Outreach remains manual</footer>
+    <footer>Jackson Web Solutions Lead Finder · Private lead storage enabled · Google Maps discovery · WhatsApp outreach remains manual</footer>
   </main>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -126,7 +126,7 @@
   }
   function showWorkspace(user) {
     currentUser = user; $('authPanel').classList.add('hidden'); $('workspace').classList.remove('hidden');
-    $('accountLabel').textContent = 'Signed in: ' + user.email; $('appNotice').innerHTML = '<span>🔒</span><div><b>Private workspace connected</b>Your leads are stored in Supabase and protected by account-level row security. Use Discover businesses to search OpenStreetMap.</div>';
+    $('accountLabel').textContent = 'Signed in: ' + user.email; $('appNotice').innerHTML = '<span>🔒</span><div><b>Private workspace connected</b>Your leads are stored in Supabase and protected by account-level row security. Use Discover businesses to search Google Maps.</div>';
   }
   $('authForm').addEventListener('submit', async e => {
     e.preventDefault(); $('authStatus').textContent = 'Signing in…';
@@ -152,22 +152,25 @@
     savedLeads=data||[];renderLeads();$('leadFormStatus').textContent='';
   }
   function renderLeads(){
-    const q=$('searchInput').value.trim().toLowerCase(), type=$('typeFilter').value;
+    const q=$('searchInput').value.trim().toLowerCase(), type=$('typeFilter').value, followFilter=$('followupFilter')?.value||'all';
     const visible=savedLeads.filter(l=>{
       const text=[l.business_name,l.category,l.town,l.phone,l.service_interest,l.opportunity_reason].join(' ').toLowerCase();
       const t=(l.service_interest||'').toLowerCase();
       const typeMatch=type==='all'||(type==='website'&&t.includes('website'))||(type==='google'&&t.includes('google'))||(type==='both'&&t.includes('website')&&t.includes('google'));
-      return text.includes(q)&&typeMatch;
+      const scheduled=Boolean(l.follow_up_at), due=scheduled&&new Date(l.follow_up_at)<=new Date();
+      const followMatch=followFilter==='all'||(followFilter==='scheduled'&&scheduled)||(followFilter==='due'&&due)||(followFilter==='unscheduled'&&!scheduled);
+      return text.includes(q)&&typeMatch&&followMatch;
     });
     $('leadList').innerHTML=visible.map(l=>{
       const initials=(l.business_name||'B').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
-      return `<article class="lead"><div class="lead-logo">${safe(initials)}</div><div class="lead-main"><div class="lead-title-row"><div><h3>${safe(l.business_name)}</h3><div class="lead-meta">${safe([l.town,l.category].filter(Boolean).join(' · ')||'Business category not added')}</div></div><span class="pill blue">${safe(l.service_interest||'Opportunity')}</span></div><div class="lead-reason">${safe(l.opportunity_reason||l.notes||'No notes added yet.')}</div><div class="lead-foot"><span class="pill">${safe(statusNames[l.outreach_status]||l.outreach_status)}</span>${l.phone?`<span class="pill">${safe(l.phone)}</span>`:''}<span class="score">Score: ${Number(l.opportunity_score)||0}/100</span></div>${l.website_url?`<div class="lead-meta" style="margin-top:7px"><a href="${safe(l.website_url)}" target="_blank" rel="noopener">Open website</a></div>`:''}<div class="lead-row-actions"><select aria-label="Update status for ${safe(l.business_name)}" data-status-id="${l.id}">${Object.entries(statusNames).map(([k,v])=>`<option value="${k}" ${l.outreach_status===k?'selected':''}>${v}</option>`).join('')}</select><button type="button" class="btn" data-message-id="${l.id}">Draft message</button><button type="button" class="btn" data-delete-id="${l.id}">Delete</button></div></div></article>`;
+      return `<article class="lead"><div class="lead-logo">${safe(initials)}</div><div class="lead-main"><div class="lead-title-row"><div><h3>${safe(l.business_name)}</h3><div class="lead-meta">${safe([l.town,l.category].filter(Boolean).join(' · ')||'Business category not added')}</div></div><span class="pill blue">${safe(l.service_interest||'Opportunity')}</span></div><div class="lead-reason">${safe(l.opportunity_reason||l.notes||'No notes added yet.')}</div><div class="lead-foot"><span class="pill">${safe(statusNames[l.outreach_status]||l.outreach_status)}</span>${l.phone?`<span class="pill">${safe(l.phone)}</span>`:''}<span class="score">Score: ${Number(l.opportunity_score)||0}/100</span></div>${l.website_url?`<div class="lead-meta" style="margin-top:7px"><a href="${safe(l.website_url)}" target="_blank" rel="noopener">Open website</a></div>`:''}<div class="lead-meta" style="margin-top:8px">${l.follow_up_at?`Follow-up: ${safe(new Date(l.follow_up_at).toLocaleString())}${new Date(l.follow_up_at)<=new Date()?' · DUE':''}`:'No follow-up scheduled'}${!l.phone?' · Phone missing':''}${!l.website_url?' · Website needs checking':''}${(!l.google_profile_status||l.google_profile_status==='unknown')?' · Google profile unverified':''}</div><div class="lead-row-actions"><select aria-label="Update status for ${safe(l.business_name)}" data-status-id="${l.id}">${Object.entries(statusNames).map(([k,v])=>`<option value="${k}" ${l.outreach_status===k?'selected':''}>${v}</option>`).join('')}</select><button type="button" class="btn" data-message-id="${l.id}">Personalize message</button>${l.phone?`<button type="button" class="btn primary" data-whatsapp-id="${l.id}">WhatsApp</button>`:`<button type="button" class="btn" disabled title="Add a phone number first">WhatsApp unavailable</button>`}<button type="button" class="btn" data-schedule-id="${l.id}">Schedule follow-up</button><button type="button" class="btn" data-delete-id="${l.id}">Delete</button></div></div></article>`;
     }).join('');
     $('emptyState').hidden=visible.length>0;
     $('newCount').textContent=savedLeads.filter(l=>l.outreach_status==='new').length;
-    $('websiteCount').textContent=savedLeads.filter(l=>(l.service_interest||'').toLowerCase().includes('website')).length;
-    $('googleCount').textContent=savedLeads.filter(l=>(l.service_interest||'').toLowerCase().includes('google')).length;
-    $('followupCount').textContent=savedLeads.filter(l=>l.follow_up_at&&new Date(l.follow_up_at)<=new Date()).length;
+    $('websiteCount').textContent=savedLeads.filter(l=>(l.service_interest||'').toLowerCase().includes('website') || l.website_status==='no_website_found_needs_review').length;
+    $('googleCount').textContent=savedLeads.filter(l=>(l.service_interest||'').toLowerCase().includes('google') || ['not_found_needs_manual_verification','confirmed_missing'].includes(l.google_profile_status)).length;
+    const scheduledCount=savedLeads.filter(l=>l.follow_up_at).length; const dueCount=savedLeads.filter(l=>l.follow_up_at&&new Date(l.follow_up_at)<=new Date()).length;
+    $('followupCount').textContent=scheduledCount; $('followupSub').textContent=dueCount+' due / overdue';
     $('leadCountPill').textContent=savedLeads.length+' SAVED';
   }
   $('discoveryForm').addEventListener('submit', async e => {
@@ -178,7 +181,7 @@
     const category = $('discoveryCategory').value;
     if (!town) { $('discoveryStatus').textContent = 'Enter a town or city.'; return; }
     button.disabled = true;
-    $('discoveryStatus').textContent = 'Searching OpenStreetMap… this can take a little while.';
+    $('discoveryStatus').textContent = 'Searching Google Maps… this can take a little while.';
     try {
       const { data, error } = await client.functions.invoke('Discover-leads', { body: { town, category } });
       if (error) throw new Error(error.message || 'The discovery function returned an error.');
@@ -199,6 +202,7 @@
       const checkedAt = new Date().toISOString();
       const rows = fresh.map(b => {
         const hasWebsite = Boolean(b.website_url);
+        const serviceInterest = hasWebsite ? 'Google Business Profile' : 'Website design';
         return {
           user_id: currentUser.id,
           business_name: String(b.business_name).slice(0, 180),
@@ -206,24 +210,24 @@
           town: b.town || town,
           phone: b.phone || null,
           website_url: b.website_url || null,
-          source: b.source || 'OpenStreetMap',
+          source: b.source || 'Google Maps via SerpApi',
           source_url: b.source_url || null,
           source_checked_at: checkedAt,
           website_status: hasWebsite ? 'website_found' : 'no_website_found_needs_review',
           google_profile_status: 'unknown',
-          service_interest: hasWebsite ? 'Google Business Profile' : 'Website design',
+          service_interest: serviceInterest,
           opportunity_score: hasWebsite ? 55 : 70,
           opportunity_reason: hasWebsite
-            ? 'Business found in OpenStreetMap. Check its Google Business Profile and website manually before outreach.'
-            : 'No website URL was listed in OpenStreetMap. This does not prove the business has no website; verify manually before outreach.',
-          notes: `Discovered from OpenStreetMap in ${b.town || town}. Verify contact details and online presence before outreach.`,
+            ? 'Website link was listed in Google Maps results. Check the website and Google Business Profile manually before outreach.'
+            : 'No website link was returned in Google Maps results. This does not prove the business has no website; verify manually before outreach.',
+          notes: `Discovered from Google Maps via SerpApi in ${b.town || town}. Verify contact details and online presence before outreach.`,
           outreach_status: 'new'
         };
       });
       const { error: saveError } = await client.from('leads').insert(rows);
       if (saveError) throw new Error('Results were found but could not be saved: ' + saveError.message);
       await loadLeads();
-      $('discoveryStatus').textContent = `Success: saved ${rows.length} new lead(s) from ${data.source || 'OpenStreetMap'} in ${town}. Check details before contacting. ${data.businesses.length - rows.length} duplicate/blank result(s) skipped.`;
+      $('discoveryStatus').textContent = `Success: saved ${rows.length} new lead(s) from ${data.source || 'Google Maps via SerpApi'} in ${town}. Check details before contacting. ${data.businesses.length - rows.length} duplicate/blank result(s) skipped.`;
     } catch (err) {
       $('discoveryStatus').textContent = 'Discovery failed: ' + (err?.message || String(err)) + ' If this continues, check the Supabase function logs.';
     } finally {
@@ -248,17 +252,58 @@
   });
   $('leadList').addEventListener('click',async e=>{
     const mid=e.target.dataset.messageId, did=e.target.dataset.deleteId;
-    if(mid){const l=savedLeads.find(x=>x.id===mid);if(!l)return;$('serviceSelect').value=(l.service_interest||'').toLowerCase().includes('google')&&!(l.service_interest||'').toLowerCase().includes('website')?'google':(l.service_interest||'').toLowerCase().includes('google')?'both':'website';$('messageText').value=`Hello${l.business_name?' '+l.business_name:''}! I help businesses with ${l.service_interest||'their online presence'}. ${l.opportunity_reason?'I noticed: '+l.opportunity_reason+' ':''}Would you be open to a quick discussion?`;$('messageStatus').textContent='Personalized draft generated. Review it and send manually if appropriate.';window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
+    if(mid){const l=savedLeads.find(x=>x.id===mid);if(!l)return;$('serviceSelect').value=(l.service_interest||'').toLowerCase().includes('google')&&!(l.service_interest||'').toLowerCase().includes('website')?'google':(l.service_interest||'').toLowerCase().includes('google')?'both':'website';$('messageText').value=buildMessage(l);$('messageStatus').textContent='Personalized draft generated. Review it and send manually if appropriate.';window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
     if(did){if(!confirm('Delete this saved lead? This cannot be undone.'))return;const {error}=await client.from('leads').delete().eq('id',did);if(error){$('leadFormStatus').textContent='Delete failed: '+error.message;return;}await loadLeads();}
   });
-  $('searchInput').addEventListener('input',renderLeads);$('typeFilter').addEventListener('change',renderLeads);
+  $('leadList').addEventListener('click', async e => {
+    const whatsappId=e.target.dataset.whatsappId, scheduleId=e.target.dataset.scheduleId;
+    if(whatsappId){
+      const l=savedLeads.find(x=>x.id===whatsappId); if(!l||!l.phone)return;
+      const draft=buildMessage(l);
+      $('serviceSelect').value=(l.service_interest||'').toLowerCase().includes('google')&&!(l.service_interest||'').toLowerCase().includes('website')?'google':(l.service_interest||'').toLowerCase().includes('google')?'both':'website';
+      $('messageText').value=draft; $('messageStatus').textContent='Review this personalized message. WhatsApp will open with the draft; you must press Send.';
+      const phone=normalizePhone(l.phone);
+      if(!phone){$('messageStatus').textContent='Could not recognize this phone number. Add a valid WhatsApp number with country code, e.g. 2547XXXXXXXX.';return;}
+      window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(draft),'_blank','noopener');
+      return;
+    }
+    if(scheduleId){
+      const l=savedLeads.find(x=>x.id===scheduleId); if(!l)return;
+      const current=l.follow_up_at?new Date(l.follow_up_at):new Date(Date.now()+24*60*60*1000);
+      const localValue=new Date(current.getTime()-current.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      const entered=prompt('Enter follow-up date and time (YYYY-MM-DDTHH:MM), for example '+localValue,localValue);
+      if(entered===null)return;
+      const parsed=new Date(entered);
+      if(!entered.trim()||Number.isNaN(parsed.getTime())){alert('Please enter a valid date and time.');return;}
+      if(parsed.getTime()<Date.now()&&!confirm('This time is in the past. Save it as an overdue follow-up?'))return;
+      const {error}=await client.from('leads').update({follow_up_at:parsed.toISOString(),outreach_status:'follow_up',updated_at:new Date().toISOString()}).eq('id',scheduleId);
+      if(error){$('leadFormStatus').textContent='Follow-up could not be saved: '+error.message;return;}
+      $('leadFormStatus').textContent='Follow-up scheduled for '+parsed.toLocaleString()+'.'; await loadLeads();
+    }
+  });
+  function normalizePhone(value){
+    let digits=String(value||'').replace(/\D/g,'');
+    if(digits.startsWith('00'))digits=digits.slice(2);
+    if(digits.startsWith('0')&&digits.length===10)digits='254'+digits.slice(1);
+    if(digits.startsWith('7')&&digits.length===9)digits='254'+digits;
+    if(digits.startsWith('1')&&digits.length===9)digits='254'+digits;
+    return digits.length>=10&&digits.length<=15?digits:'';
+  }
+  function buildMessage(l){
+    const service=(l.service_interest||'').toLowerCase();
+    if(service.includes('google')&&!service.includes('website')) return `Hello${l.business_name?' '+l.business_name:''}, I’m Jackson from Jackson Web Solutions. I help businesses improve their Google Business Profile so nearby customers can find accurate details and contact them more easily. I came across your business online and wanted to ask: would you be open to a quick discussion about your Google visibility?`;
+    if(service.includes('google')&&service.includes('website')) return `Hello${l.business_name?' '+l.business_name:''}, I’m Jackson from Jackson Web Solutions. I help businesses improve their website and Google visibility so customers can find them and get in touch more easily. Would you be open to a quick discussion about what could work for your business?`;
+    return `Hello${l.business_name?' '+l.business_name:''}, I’m Jackson from Jackson Web Solutions. I help businesses create professional websites that make it easier for customers to view their services and contact them. I came across your business while researching businesses in your area. Would you be open to a quick discussion about your online presence?`;
+  }
+  $('searchInput').addEventListener('input',renderLeads);$('typeFilter').addEventListener('change',renderLeads);$('followupFilter').addEventListener('change',renderLeads);
   $('refreshBtn').addEventListener('click',async()=>{if(currentUser)await loadLeads();else showAuth();});
   $('serviceSelect').addEventListener('change',e=>{
     const messages={website:"Hello! I help businesses create professional websites that make it easier for customers to explore their services and get in touch. Would you be open to a quick discussion about your business's online presence?",google:'Hello! I help businesses set up or improve their Google Business Profile so customers can find accurate business information. Would you be open to a quick discussion?',both:'Hello! I help businesses build professional websites and improve their Google visibility so customers can find them and get in touch more easily. Would you be open to a quick discussion?'};
     $('messageText').value=messages[e.target.value];$('messageStatus').textContent='Review and personalize this draft before sending.';
   });
   $('copyBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('messageText').value);$('messageStatus').textContent='Draft copied. No message was sent.';}catch{$('messageText').select();$('messageStatus').textContent='Select and copy the highlighted text manually.';}});
-  $('saveBtn').addEventListener('click',()=>{$('messageStatus').textContent='Draft is copied on request only; saving message drafts to the database is not implemented yet.';});
+  $('saveBtn').addEventListener('click',()=>{try{localStorage.setItem('jws_lead_finder_draft',$('messageText').value);$('messageStatus').textContent='Draft saved on this device only. It is not saved to Supabase and was not sent.';}catch{$('messageStatus').textContent='Could not save locally on this device. Copy the draft instead.';}});
+  try{const localDraft=localStorage.getItem('jws_lead_finder_draft');if(localDraft)$('messageText').value=localDraft;}catch{}
   client.auth.getSession().then(async({data,error})=>{if(error){showAuth(error.message);return;}if(data.session){showWorkspace(data.session.user);await loadLeads();}else showAuth();});
   client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){currentUser=null;savedLeads=[];renderLeads();showAuth();}});
 })();
