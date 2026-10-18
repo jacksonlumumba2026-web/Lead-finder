@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101828">
+  <title>Jackson Lead Finder</title>
+  <style>
+    :root{--bg:#f4f6fa;--panel:#fff;--ink:#172033;--muted:#667085;--line:#e5e9f0;--nav:#101828;--blue:#3458eb;--blue-soft:#eef2ff;--green:#067647;--green-soft:#ecfdf3;--amber:#92400e;--amber-soft:#fffaeb}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-columns:245px 1fr}
+    aside{background:var(--nav);color:#fff;padding:24px 16px;display:flex;flex-direction:column;gap:28px}.brand{display:flex;align-items:center;gap:11px;padding:0 8px}.brand-mark{width:38px;height:38px;border-radius:12px;background:#3458eb;display:grid;place-items:center;font-weight:800;font-size:18px}.brand strong{display:block;font-size:14px}.brand span{display:block;color:#98a2b3;font-size:12px;margin-top:2px}
+    .nav-label{color:#98a2b3;text-transform:uppercase;font-size:10px;letter-spacing:1.3px;padding:0 12px;margin-bottom:8px}.nav-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:9px;color:#d0d5dd;margin:3px 0;font-size:14px}.nav-item.active{background:#26334b;color:#fff}.nav-icon{width:18px;text-align:center}.side-note{margin-top:auto;border:1px solid #344054;border-radius:12px;padding:13px;color:#d0d5dd;font-size:12px}.side-note b{display:block;color:#fff;margin-bottom:5px}
+    main{min-width:0;padding:28px clamp(16px,3vw,38px) 44px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:26px}.eyebrow{color:var(--muted);font-size:12px;margin-bottom:4px}.page-title{font-size:27px;line-height:1.2;margin:0;font-weight:750;letter-spacing:-.7px}.top-actions{display:flex;align-items:center;gap:9px}.avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#e0e7ff;color:#273da8;font-weight:750}
+    .btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 13px;border-radius:9px;font-weight:650;font-size:13px}.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn:disabled{opacity:.45;cursor:not-allowed}
+    .notice{display:flex;gap:10px;align-items:flex-start;padding:13px 15px;border:1px solid #f2d39b;background:var(--amber-soft);border-radius:11px;color:#7a4b0c;font-size:13px;margin-bottom:20px}.notice b{display:block;margin-bottom:2px}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}.stat,.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px}.stat{padding:17px}.stat-head{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}.stat-icon{width:31px;height:31px;border-radius:9px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue)}.stat-value{font-size:27px;font-weight:750;letter-spacing:-.7px;margin:12px 0 2px}.stat-sub{font-size:11px;color:var(--muted)}
+    .content-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,.8fr);gap:18px;align-items:start}.panel{padding:18px;min-width:0}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:15px}.panel h2{font-size:16px;margin:0 0 4px}.panel-sub{font-size:12px;color:var(--muted)}.pill{display:inline-flex;align-items:center;border-radius:99px;padding:4px 8px;font-size:11px;font-weight:700;background:#f2f4f7;color:#475467;white-space:nowrap}.pill.demo{background:var(--amber-soft);color:var(--amber)}.pill.green{background:var(--green-soft);color:var(--green)}.pill.blue{background:var(--blue-soft);color:#3538cd}
+    .filters{display:flex;gap:8px;margin-bottom:14px}.filters input,.filters select{min-width:0;width:100%;border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 11px;font-size:13px;color:var(--ink)}.filters select{max-width:150px}
+    .lead-list{display:flex;flex-direction:column;gap:10px}.lead{border:1px solid var(--line);border-radius:11px;padding:13px;display:flex;gap:12px;align-items:flex-start}.lead-logo{flex:0 0 40px;height:40px;border-radius:11px;display:grid;place-items:center;background:#f2f4f7;color:#475467;font-weight:800}.lead-main{min-width:0;flex:1}.lead-title-row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.lead h3{font-size:14px;margin:0 0 3px}.lead-meta{font-size:11px;color:var(--muted)}.lead-reason{font-size:12px;margin:9px 0;color:#344054}.lead-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.score{font-size:11px;color:var(--muted);margin-left:auto}.empty{padding:24px 8px;text-align:center;color:var(--muted);font-size:13px}
+    .message-box{border:1px solid var(--line);border-radius:11px;padding:13px;background:#fbfcfe}.message-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}.message-box label{display:block;font-size:12px;font-weight:700;margin:12px 0 6px}.message-box select,.message-box textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;color:var(--ink);font-size:13px}.message-box textarea{min-height:150px;resize:vertical}.message-actions{display:flex;gap:8px;margin-top:11px}.message-actions button{flex:1}.hint{font-size:11px;color:var(--muted);margin-top:10px}.activity{margin-top:18px}.activity-row{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:12px}.activity-row:last-child{border-bottom:0}.activity-dot{width:8px;height:8px;border-radius:50%;background:#98a2b3;margin-top:5px;flex:0 0 auto}.activity-row b{display:block;font-size:12px;margin-bottom:2px}.activity-row span{color:var(--muted)}
+    footer{margin-top:24px;color:var(--muted);font-size:11px;text-align:center}.mobile-brand{display:none}
+    @media(max-width:1050px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.content-grid{grid-template-columns:1fr}.message-panel{order:-1}}
+    @media(max-width:650px){.app{display:block}aside{display:none}main{padding:18px 13px 32px}.topbar{align-items:flex-start}.page-title{font-size:23px}.top-actions .btn{display:none}.mobile-brand{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:12px;font-weight:700}.mobile-brand .brand-mark{width:31px;height:31px;font-size:15px}.stats{gap:9px}.stat{padding:13px}.stat-value{font-size:23px}.stat-head{font-size:11px}.stat-icon{width:27px;height:27px}.panel{padding:13px}.filters{flex-direction:column}.filters select{max-width:none}.lead{padding:11px}.lead-title-row{display:block}.lead-title-row .pill{margin-top:5px}.score{margin-left:0}.message-actions{flex-direction:column}}
+
+    .auth-wrap{max-width:480px;margin:28px auto;padding:22px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(16,24,40,.06)}
+    .auth-wrap h2{margin:0 0 6px;font-size:21px}.auth-wrap p{margin:0 0 18px;color:var(--muted);font-size:13px}.auth-wrap label,.lead-form label{display:block;font-size:12px;font-weight:700;margin:12px 0 5px}.auth-wrap input,.lead-form input,.lead-form select,.lead-form textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:11px;background:#fff;color:var(--ink);font:inherit;font-size:13px}.auth-actions{display:flex;gap:8px;margin-top:15px}.auth-actions button{flex:1}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}.lead-form{padding:14px;border:1px solid var(--line);border-radius:11px;background:#fbfcfe;margin-bottom:14px}.lead-form h3{font-size:14px;margin:0 0 4px}.lead-form .btn{margin-top:12px}.hidden{display:none!important}.lead-row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.lead-row-actions select{max-width:180px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:12px}
+    @media(max-width:650px){.form-grid{grid-template-columns:1fr}.auth-wrap{margin:12px auto;padding:17px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="brand-mark">J</div><div><strong>Jackson Web Solutions</strong><span>Lead Finder</span></div></div>
+    <div><div class="nav-label">Workspace</div><div class="nav-item active"><span class="nav-icon">▦</span> Overview</div><div class="nav-item"><span class="nav-icon">⌕</span> Lead discovery</div><div class="nav-item"><span class="nav-icon">✉</span> Message drafts</div><div class="nav-item"><span class="nav-icon">↻</span> Follow-ups</div></div>
+    <div><div class="nav-label">Manage</div><div class="nav-item"><span class="nav-icon">⚙</span> Settings</div></div>
+    <div class="side-note"><b>Build status</b>Interface preview only. Real discovery, login and database will be connected in later steps.</div>
+  </aside>
+  <main>
+    <div class="mobile-brand"><div class="brand-mark">J</div>JACKSON WEB SOLUTIONS <span style="color:#667085;font-weight:500">/ LEAD FINDER</span></div>
+    <div class="topbar">
+      <div><div class="eyebrow">SUNDAY, OCTOBER 18 · KENYA</div><h1 class="page-title">Lead overview</h1><div class="eyebrow" style="margin-top:7px">Find businesses that could benefit from your services.</div></div>
+      <div class="top-actions"><button class="btn" id="refreshBtn">↻ Refresh view</button><div class="avatar">J</div></div>
+    </div>
+    <div class="notice" id="appNotice"><span>🔒</span><div><b>Private Lead Finder</b>Sign in to save and manage your own leads. Lead discovery and automatic daily collection are not connected yet.</div></div>
+    <section class="auth-wrap" id="authPanel">
+      <h2>Sign in to your workspace</h2><p>Create your own account or sign in to access your private leads.</p>
+      <form id="authForm">
+        <label for="authEmail">Email address</label><input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+        <label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="At least 8 characters">
+        <div class="auth-actions"><button class="btn primary" type="submit" id="signInBtn">Sign in</button><button class="btn" type="button" id="signUpBtn">Create account</button></div>
+      </form><div class="hint" id="authStatus" role="status">Use an email you can access. If email confirmation is enabled, confirm your account from your inbox.</div>
+    </section>
+    <div id="workspace" class="hidden">
+    <section class="stats">
+      <div class="stat"><div class="stat-head">New leads <span class="stat-icon">⌕</span></div><div class="stat-value" id="newCount">0</div><div class="stat-sub">Saved to your account</div></div>
+      <div class="stat"><div class="stat-head">Website opportunities <span class="stat-icon">↗</span></div><div class="stat-value" id="websiteCount">0</div><div class="stat-sub">Saved opportunities</div></div>
+      <div class="stat"><div class="stat-head">Google visibility <span class="stat-icon">◎</span></div><div class="stat-value" id="googleCount">0</div><div class="stat-sub">Saved opportunities</div></div>
+      <div class="stat"><div class="stat-head">Follow-ups due <span class="stat-icon">↻</span></div><div class="stat-value" id="followupCount">0</div><div class="stat-sub">Scheduled for follow-up</div></div>
+    </section>
+    <div class="content-grid">
+      <section class="panel">
+        <div class="panel-head"><div><h2>Prospect queue</h2><div class="panel-sub">Only leads saved under your account appear here.</div></div><span class="pill green" id="leadCountPill">0 SAVED</span></div>
+        <form class="lead-form" id="discoveryForm">
+          <h3>Discover businesses</h3>
+          <div class="panel-sub">Search OpenStreetMap for publicly listed businesses. Results are saved to your account after duplicate checks. Verify each lead before contacting it.</div>
+          <div class="form-grid">
+            <div><label for="discoveryTown">Town or city</label><input id="discoveryTown" maxlength="100" value="Nakuru" required placeholder="e.g. Nakuru"></div>
+            <div><label for="discoveryCategory">Business category</label><select id="discoveryCategory"><option value="furniture">Furniture shops</option><option value="carpenter">Carpenters</option><option value="all">All supported categories</option></select></div>
+          </div>
+          <button class="btn primary" id="discoverBtn" type="submit">Find and save leads</button>
+          <div class="hint" id="discoveryStatus" role="status">Discovery is on-demand, not an automatic daily scan. OpenStreetMap coverage varies by town.</div>
+        </form>
+        <form class="lead-form" id="leadForm">
+          <h3>Add a business lead</h3><div class="panel-sub">Enter a business you have personally verified. Fields marked required must be filled.</div>
+          <div class="form-grid">
+            <div><label for="businessName">Business name *</label><input id="businessName" required maxlength="180" placeholder="Business name"></div>
+            <div><label for="businessCategory">Category</label><input id="businessCategory" maxlength="100" placeholder="e.g. Furniture"></div>
+            <div><label for="businessTown">Town</label><input id="businessTown" maxlength="100" placeholder="e.g. Nakuru"></div>
+            <div><label for="businessPhone">Phone / WhatsApp</label><input id="businessPhone" maxlength="40" placeholder="Business contact"></div>
+            <div><label for="businessWebsite">Website URL</label><input id="businessWebsite" type="url" placeholder="https://..."></div>
+            <div><label for="businessService">Opportunity</label><select id="businessService"><option value="Website design">Website design</option><option value="Google Business Profile">Google Business Profile</option><option value="Website + Google Business Profile">Website + Google Business Profile</option></select></div>
+            <div><label for="businessScore">Opportunity score (0–100)</label><input id="businessScore" type="number" min="0" max="100" value="50"></div>
+            <div><label for="businessFollowup">Follow-up date</label><input id="businessFollowup" type="date"></div>
+          </div>
+          <label for="businessReason">Reason / notes</label><textarea id="businessReason" rows="2" maxlength="1000" placeholder="What did you verify? What could help this business?"></textarea>
+          <button class="btn primary" id="addLeadBtn" type="submit">Save lead</button><span class="hint" id="leadFormStatus" role="status"></span>
+        </form>
+        <div class="filters"><input id="searchInput" type="search" placeholder="Search business, town or service…" aria-label="Search leads"><select id="typeFilter" aria-label="Filter by opportunity"><option value="all">All opportunities</option><option value="website">Website</option><option value="google">Google visibility</option><option value="both">Both</option></select></div>
+        <div class="lead-list" id="leadList"></div>
+        <div class="empty" id="emptyState" hidden>No saved leads match. Add a verified business above to get started.</div>
+      </section>
+      <section class="panel message-panel">
+        <div class="panel-head"><div><h2>Message workspace</h2><div class="panel-sub">Create and copy drafts. Sending remains manual.</div></div><span class="pill">Draft only</span></div>
+        <div class="message-box">
+          <div class="message-top"><strong style="font-size:13px">WhatsApp draft</strong><span class="pill demo">NOT SENT</span></div>
+          <label for="serviceSelect">Service offer</label>
+          <select id="serviceSelect"><option value="website">Website design</option><option value="google">Google Business Profile</option><option value="both">Website + Google visibility</option></select>
+          <label for="messageText">Message</label>
+          <textarea id="messageText">Hello! I help businesses create professional websites that make it easier for customers to explore their services and get in touch. Would you be open to a quick discussion about your business's online presence?</textarea>
+          <div class="message-actions"><button class="btn" id="copyBtn">Copy draft</button><button class="btn primary" id="saveBtn">Save draft locally</button></div>
+          <div class="hint" id="messageStatus">Edit the draft before contacting a business. Copying does not send it.</div>
+        </div>
+        <div class="activity"><h2>Next steps</h2><div class="activity-row"><span class="activity-dot"></span><div><b>Database connected</b><span>Leads save to your authenticated account.</span></div></div><div class="activity-row"><span class="activity-dot"></span><div><b>Add a real discovery source</b><span>Fetch businesses and record where each came from.</span></div></div><div class="activity-row"><span class="activity-dot"></span><div><b>Enable daily scans</b><span>Schedule discovery and log actual results.</span></div></div></div>
+      </section>
+    </div>
+    <div class="activity-row" style="margin-top:12px"><span class="activity-dot"></span><div><b id="accountLabel">Signed out</b><span><button class="btn" type="button" id="signOutBtn">Sign out</button></span></div></div>
+    </div>
+    <footer>Jackson Web Solutions Lead Finder · Private lead storage enabled · On-demand OpenStreetMap discovery · Outreach remains manual</footer>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const SUPABASE_URL = 'https://helpgfnumatkcvdzydek.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_HM9fGcEM36EDKuv1jJgdPw_BDEFfjd1';
+  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const $ = id => document.getElementById(id);
+  let currentUser = null;
+  let savedLeads = [];
+  const safe = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const statusNames = {new:'New',ready_to_contact:'Ready to contact',contacted:'Contacted',replied:'Replied',follow_up:'Follow-up',converted:'Converted',not_interested:'Not interested'};
+  function showAuth(message='') {
+    $('authPanel').classList.remove('hidden'); $('workspace').classList.add('hidden');
+    $('authStatus').textContent = message || 'Use an email you can access. If email confirmation is enabled, confirm your account from your inbox.';
+  }
+  function showWorkspace(user) {
+    currentUser = user; $('authPanel').classList.add('hidden'); $('workspace').classList.remove('hidden');
+    $('accountLabel').textContent = 'Signed in: ' + user.email; $('appNotice').innerHTML = '<span>🔒</span><div><b>Private workspace connected</b>Your leads are stored in Supabase and protected by account-level row security. Use Discover businesses to search OpenStreetMap.</div>';
+  }
+  $('authForm').addEventListener('submit', async e => {
+    e.preventDefault(); $('authStatus').textContent = 'Signing in…';
+    const {data,error} = await client.auth.signInWithPassword({email:$('authEmail').value.trim(),password:$('authPassword').value});
+    if(error){$('authStatus').textContent = error.message;return;}
+    showWorkspace(data.user); await loadLeads();
+  });
+  $('signUpBtn').addEventListener('click', async () => {
+    const email=$('authEmail').value.trim(), password=$('authPassword').value;
+    if(!email || password.length < 8){$('authStatus').textContent='Enter your email and a password of at least 8 characters first.';return;}
+    $('authStatus').textContent='Creating account…';
+    const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+    if(error){$('authStatus').textContent=error.message;return;}
+    if(data.session && data.user){showWorkspace(data.user);await loadLeads();}
+    else $('authStatus').textContent='Account request received. Check your email for a confirmation link, then return here and sign in.';
+  });
+  $('signOutBtn').addEventListener('click', async () => {await client.auth.signOut();currentUser=null;savedLeads=[];renderLeads();showAuth('You have signed out.');});
+  async function loadLeads(){
+    if(!currentUser)return;
+    $('leadFormStatus').textContent='Loading saved leads…';
+    const {data,error}=await client.from('leads').select('*').order('created_at',{ascending:false});
+    if(error){$('leadFormStatus').textContent='Could not load leads: '+error.message;return;}
+    savedLeads=data||[];renderLeads();$('leadFormStatus').textContent='';
+  }
+  function renderLeads(){
+    const q=$('searchInput').value.trim().toLowerCase(), type=$('typeFilter').value;
+    const visible=savedLeads.filter(l=>{
+      const text=[l.business_name,l.category,l.town,l.phone,l.service_interest,l.opportunity_reason].join(' ').toLowerCase();
+      const t=(l.service_interest||'').toLowerCase();
+      const typeMatch=type==='all'||(type==='website'&&t.includes('website'))||(type==='google'&&t.includes('google'))||(type==='both'&&t.includes('website')&&t.includes('google'));
+      return text.includes(q)&&typeMatch;
+    });
+    $('leadList').innerHTML=visible.map(l=>{
+      const initials=(l.business_name||'B').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
+      return `<article class="lead"><div class="lead-logo">${safe(initials)}</div><div class="lead-main"><div class="lead-title-row"><div><h3>${safe(l.business_name)}</h3><div class="lead-meta">${safe([l.town,l.category].filter(Boolean).join(' · ')||'Business category not added')}</div></div><span class="pill blue">${safe(l.service_interest||'Opportunity')}</span></div><div class="lead-reason">${safe(l.opportunity_reason||l.notes||'No notes added yet.')}</div><div class="lead-foot"><span class="pill">${safe(statusNames[l.outreach_status]||l.outreach_status)}</span>${l.phone?`<span class="pill">${safe(l.phone)}</span>`:''}<span class="score">Score: ${Number(l.opportunity_score)||0}/100</span></div>${l.website_url?`<div class="lead-meta" style="margin-top:7px"><a href="${safe(l.website_url)}" target="_blank" rel="noopener">Open website</a></div>`:''}<div class="lead-row-actions"><select aria-label="Update status for ${safe(l.business_name)}" data-status-id="${l.id}">${Object.entries(statusNames).map(([k,v])=>`<option value="${k}" ${l.outreach_status===k?'selected':''}>${v}</option>`).join('')}</select><button type="button" class="btn" data-message-id="${l.id}">Draft message</button><button type="button" class="btn" data-delete-id="${l.id}">Delete</button></div></div></article>`;
+    }).join('');
+    $('emptyState').hidden=visible.length>0;
+    $('newCount').textContent=savedLeads.filter(l=>l.outreach_status==='new').length;
+    $('websiteCount').textContent=savedLeads.filter(l=>(l.service_interest||'').toLowerCase().includes('website')).length;
+    $('googleCount').textContent=savedLeads.filter(l=>(l.service_interest||'').toLowerCase().includes('google')).length;
+    $('followupCount').textContent=savedLeads.filter(l=>l.follow_up_at&&new Date(l.follow_up_at)<=new Date()).length;
+    $('leadCountPill').textContent=savedLeads.length+' SAVED';
+  }
+  $('discoveryForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!currentUser) { $('discoveryStatus').textContent = 'Sign in first.'; return; }
+    const button = $('discoverBtn');
+    const town = $('discoveryTown').value.trim();
+    const category = $('discoveryCategory').value;
+    if (!town) { $('discoveryStatus').textContent = 'Enter a town or city.'; return; }
+    button.disabled = true;
+    $('discoveryStatus').textContent = 'Searching OpenStreetMap… this can take a little while.';
+    try {
+      const { data, error } = await client.functions.invoke('Discover-leads', { body: { town, category } });
+      if (error) throw new Error(error.message || 'The discovery function returned an error.');
+      if (!data || data.success !== true || !Array.isArray(data.businesses)) {
+        throw new Error(data?.error || 'Unexpected response from the discovery function.');
+      }
+      const existing = new Set(savedLeads.map(l => `${(l.business_name || '').trim().toLowerCase()}|${(l.town || '').trim().toLowerCase()}`));
+      const seen = new Set();
+      const fresh = data.businesses.filter(b => {
+        const key = `${(b.business_name || '').trim().toLowerCase()}|${(b.town || town).trim().toLowerCase()}`;
+        if (!b.business_name || existing.has(key) || seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+      if (!fresh.length) {
+        $('discoveryStatus').textContent = `Search returned ${data.count ?? data.businesses.length} result(s), but there were no new businesses to save. Try another town or category.`;
+        return;
+      }
+      const checkedAt = new Date().toISOString();
+      const rows = fresh.map(b => {
+        const hasWebsite = Boolean(b.website_url);
+        return {
+          user_id: currentUser.id,
+          business_name: String(b.business_name).slice(0, 180),
+          category: b.category || category,
+          town: b.town || town,
+          phone: b.phone || null,
+          website_url: b.website_url || null,
+          source: b.source || 'OpenStreetMap',
+          source_url: b.source_url || null,
+          source_checked_at: checkedAt,
+          website_status: hasWebsite ? 'website_found' : 'no_website_found_needs_review',
+          google_profile_status: 'unknown',
+          service_interest: hasWebsite ? 'Google Business Profile' : 'Website design',
+          opportunity_score: hasWebsite ? 55 : 70,
+          opportunity_reason: hasWebsite
+            ? 'Business found in OpenStreetMap. Check its Google Business Profile and website manually before outreach.'
+            : 'No website URL was listed in OpenStreetMap. This does not prove the business has no website; verify manually before outreach.',
+          notes: `Discovered from OpenStreetMap in ${b.town || town}. Verify contact details and online presence before outreach.`,
+          outreach_status: 'new'
+        };
+      });
+      const { error: saveError } = await client.from('leads').insert(rows);
+      if (saveError) throw new Error('Results were found but could not be saved: ' + saveError.message);
+      await loadLeads();
+      $('discoveryStatus').textContent = `Success: saved ${rows.length} new lead(s) from ${data.source || 'OpenStreetMap'} in ${town}. Check details before contacting. ${data.businesses.length - rows.length} duplicate/blank result(s) skipped.`;
+    } catch (err) {
+      $('discoveryStatus').textContent = 'Discovery failed: ' + (err?.message || String(err)) + ' If this continues, check the Supabase function logs.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('leadForm').addEventListener('submit',async e=>{
+    e.preventDefault(); if(!currentUser){$('leadFormStatus').textContent='Sign in first.';return;}
+    const button=$('addLeadBtn');button.disabled=true;$('leadFormStatus').textContent='Saving lead…';
+    const follow=$('businessFollowup').value;
+    const payload={user_id:currentUser.id,business_name:$('businessName').value.trim(),category:$('businessCategory').value.trim()||null,town:$('businessTown').value.trim()||null,phone:$('businessPhone').value.trim()||null,website_url:$('businessWebsite').value.trim()||null,service_interest:$('businessService').value,opportunity_score:Number($('businessScore').value)||0,opportunity_reason:$('businessReason').value.trim()||null,notes:$('businessReason').value.trim()||null,follow_up_at:follow?new Date(follow+'T12:00:00').toISOString():null,outreach_status:'new',source:'manual'};
+    const {error}=await client.from('leads').insert(payload);
+    button.disabled=false;
+    if(error){$('leadFormStatus').textContent='Save failed: '+error.message;return;}
+    $('leadForm').reset();$('businessScore').value='50';$('leadFormStatus').textContent='Lead saved securely.';await loadLeads();
+  });
+  $('leadList').addEventListener('change',async e=>{
+    const id=e.target.dataset.statusId;if(!id)return;
+    const {error}=await client.from('leads').update({outreach_status:e.target.value,updated_at:new Date().toISOString(),...(e.target.value==='contacted'?{first_contacted_at:new Date().toISOString()}:{})}).eq('id',id);
+    if(error){$('leadFormStatus').textContent='Status update failed: '+error.message;return;} await loadLeads();
+  });
+  $('leadList').addEventListener('click',async e=>{
+    const mid=e.target.dataset.messageId, did=e.target.dataset.deleteId;
+    if(mid){const l=savedLeads.find(x=>x.id===mid);if(!l)return;$('serviceSelect').value=(l.service_interest||'').toLowerCase().includes('google')&&!(l.service_interest||'').toLowerCase().includes('website')?'google':(l.service_interest||'').toLowerCase().includes('google')?'both':'website';$('messageText').value=`Hello${l.business_name?' '+l.business_name:''}! I help businesses with ${l.service_interest||'their online presence'}. ${l.opportunity_reason?'I noticed: '+l.opportunity_reason+' ':''}Would you be open to a quick discussion?`;$('messageStatus').textContent='Personalized draft generated. Review it and send manually if appropriate.';window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
+    if(did){if(!confirm('Delete this saved lead? This cannot be undone.'))return;const {error}=await client.from('leads').delete().eq('id',did);if(error){$('leadFormStatus').textContent='Delete failed: '+error.message;return;}await loadLeads();}
+  });
+  $('searchInput').addEventListener('input',renderLeads);$('typeFilter').addEventListener('change',renderLeads);
+  $('refreshBtn').addEventListener('click',async()=>{if(currentUser)await loadLeads();else showAuth();});
+  $('serviceSelect').addEventListener('change',e=>{
+    const messages={website:"Hello! I help businesses create professional websites that make it easier for customers to explore their services and get in touch. Would you be open to a quick discussion about your business's online presence?",google:'Hello! I help businesses set up or improve their Google Business Profile so customers can find accurate business information. Would you be open to a quick discussion?',both:'Hello! I help businesses build professional websites and improve their Google visibility so customers can find them and get in touch more easily. Would you be open to a quick discussion?'};
+    $('messageText').value=messages[e.target.value];$('messageStatus').textContent='Review and personalize this draft before sending.';
+  });
+  $('copyBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('messageText').value);$('messageStatus').textContent='Draft copied. No message was sent.';}catch{$('messageText').select();$('messageStatus').textContent='Select and copy the highlighted text manually.';}});
+  $('saveBtn').addEventListener('click',()=>{$('messageStatus').textContent='Draft is copied on request only; saving message drafts to the database is not implemented yet.';});
+  client.auth.getSession().then(async({data,error})=>{if(error){showAuth(error.message);return;}if(data.session){showWorkspace(data.session.user);await loadLeads();}else showAuth();});
+  client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){currentUser=null;savedLeads=[];renderLeads();showAuth();}});
+})();
+</script></body>
+</html>
