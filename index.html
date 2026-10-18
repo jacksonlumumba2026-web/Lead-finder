@@ -76,6 +76,16 @@
           <label for="businessReason">Reason / notes</label><textarea id="businessReason" rows="2" maxlength="1000" placeholder="What did you verify? What could help this business?"></textarea>
           <button class="btn primary" id="addLeadBtn" type="submit">Save lead</button><span class="hint" id="leadFormStatus" role="status"></span>
         </form>
+        <div class="lead-form">
+  <h3>Import multiple leads</h3>
+  <p class="panel-sub">Upload a CSV file. Required column: business_name.</p>
+  <p class="panel-sub">Optional columns: category, town, phone, website_url, service_interest, opportunity_reason, source_url.</p>
+  <button type="button" class="btn" id="downloadCsvTemplate">Download CSV template</button>
+  <label for="csvFile">Choose CSV file</label>
+  <input id="csvFile" type="file" accept=".csv,text/csv">
+  <button type="button" class="btn primary" id="importCsvBtn">Import leads</button>
+  <p class="hint" id="csvStatus" role="status">Sign in before importing. Duplicate businesses will be skipped.</p>
+        </div>
         <div class="filters"><input id="searchInput" type="search" placeholder="Search business, town or service…" aria-label="Search leads"><select id="typeFilter" aria-label="Filter by opportunity"><option value="all">All opportunities</option><option value="website">Website</option><option value="google">Google visibility</option><option value="both">Both</option></select></div>
         <div class="lead-list" id="leadList"></div>
         <div class="empty" id="emptyState" hidden>No saved leads match. Add a verified business above to get started.</div>
@@ -180,6 +190,165 @@
     if(mid){const l=savedLeads.find(x=>x.id===mid);if(!l)return;$('serviceSelect').value=(l.service_interest||'').toLowerCase().includes('google')&&!(l.service_interest||'').toLowerCase().includes('website')?'google':(l.service_interest||'').toLowerCase().includes('google')?'both':'website';$('messageText').value=`Hello${l.business_name?' '+l.business_name:''}! I help businesses with ${l.service_interest||'their online presence'}. ${l.opportunity_reason?'I noticed: '+l.opportunity_reason+' ':''}Would you be open to a quick discussion?`;$('messageStatus').textContent='Personalized draft generated. Review it and send manually if appropriate.';window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
     if(did){if(!confirm('Delete this saved lead? This cannot be undone.'))return;const {error}=await client.from('leads').delete().eq('id',did);if(error){$('leadFormStatus').textContent='Delete failed: '+error.message;return;}await loadLeads();}
   });
+  
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (ch === '"' && quoted && text[i + 1] === '"') {
+      cell += '"';
+      i++;
+    } else if (ch === '"') {
+      quoted = !quoted;
+    } else if (ch === ',' && !quoted) {
+      row.push(cell.trim());
+      cell = '';
+    } else if ((ch === '\n' || ch === '\r') && !quoted) {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell.trim());
+      if (row.some(v => v !== '')) rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += ch;
+    }
+  }
+
+  row.push(cell.trim());
+  if (row.some(v => v !== '')) rows.push(row);
+
+  if (rows.length < 2) throw new Error('CSV has no business rows.');
+
+  const headers = rows.shift().map((h, i) =>
+    (i === 0 ? h.replace(/^\uFEFF/, '') : h)
+      .trim().toLowerCase()
+  );
+
+  if (!headers.includes('business_name')) {
+    throw new Error('CSV needs a business_name column.');
+  }
+
+  return rows.map(values =>
+    Object.fromEntries(headers.map((h, i) => [h, values[i] || '']))
+  );
+}
+
+$('downloadCsvTemplate').addEventListener('click', () => {
+  const csv = 'business_name,category,town,phone,website_url,service_interest,opportunity_reason,source_url\n' +
+    '"Example Furniture Shop",Furniture,Nakuru,0712345678,,Website design,"Website opportunity to verify",https://example.com';
+  const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lead-finder-template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$('importCsvBtn').addEventListener('click', async () => {
+  const status = $('csvStatus');
+  const button = $('importCsvBtn');
+  const file = $('csvFile').files[0];
+
+  if (!currentUser) {
+    status.textContent = 'Please sign in first.';
+    return;
+  }
+  if (!file) {
+    status.textContent = 'Choose a CSV file first.';
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    status.textContent = 'Please use a CSV smaller than 2 MB.';
+    return;
+  }
+
+  button.disabled = true;
+  status.textContent = 'Reading CSV...';
+
+  try {
+    const text = await file.text();
+    const rows = parseCSV(text);
+
+    const existing = new Set(savedLeads.map(l =>
+      (l.business_name || '').trim().toLowerCase() + '|' +
+      (l.town || '').trim().toLowerCase()
+    ));
+
+    const seen = new Set();
+    const payload = [];
+
+    for (const r of rows) {
+      const name = (r.business_name || '').trim();
+      if (!name) continue;
+
+      const town = (r.town || '').trim();
+      const key = name.toLowerCase() + '|' + town.toLowerCase();
+
+      if (existing.has(key) || seen.has(key)) continue;
+      seen.add(key);
+
+      const score = Number(r.opportunity_score);
+      const allowedServices = [
+        'Website design',
+        'Google Business Profile',
+        'Website + Google Business Profile'
+      ];
+      const service = allowedServices.includes(r.service_interest)
+        ? r.service_interest : 'Website design';
+
+      payload.push({
+        user_id: currentUser.id,
+        business_name: name,
+        category: r.category || null,
+        town: town || null,
+        phone: r.phone || null,
+        website_url: r.website_url || null,
+        service_interest: service,
+        opportunity_reason: r.opportunity_reason || null,
+        notes: r.opportunity_reason || null,
+        source: 'csv_import',
+        source_url: r.source_url || null,
+        source_checked_at: new Date().toISOString(),
+        opportunity_score: Number.isFinite(score)
+          ? Math.max(0, Math.min(100, score)) : 50,
+        outreach_status: 'new'
+      });
+    }
+
+    if (!payload.length) {
+      status.textContent = 'No new businesses to import. All rows were blank or duplicates.';
+      return;
+    }
+
+    let imported = 0;
+    let failed = 0;
+
+    // Small batches reduce the risk of request failures.
+    for (let i = 0; i < payload.length; i += 25) {
+      const batch = payload.slice(i, i + 25);
+      const { error } = await client.from('leads').insert(batch);
+
+      if (error) {
+        failed += batch.length;
+      } else {
+        imported += batch.length;
+      }
+    }
+
+    await loadLeads();
+    status.textContent =
+      `Import finished: ${imported} saved, ${payload.length - imported - failed} duplicates/blank rows skipped, ${failed} failed.`;
+
+  } catch (error) {
+    status.textContent = 'Import failed: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
   $('searchInput').addEventListener('input',renderLeads);$('typeFilter').addEventListener('change',renderLeads);
   $('refreshBtn').addEventListener('click',async()=>{if(currentUser)await loadLeads();else showAuth();});
   $('serviceSelect').addEventListener('change',e=>{
